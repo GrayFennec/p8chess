@@ -4,12 +4,16 @@ __lua__
 --current coordinates of hover
 hovr = 1
 hovc = 1
+--current piece hovered over
+hovp = -1
 --current tick 0 to 15
 t = 0
 --whoevers turn it is
 turn = 0
 --list of all game pieces
 pl = {}
+--game board
+gb = {}
 --board size
 brdw = 8
 brdh = 8
@@ -22,7 +26,6 @@ end
 
 --initalizes empty nxm board
 function init_board(n,m)
- gb = {}
 	for r=1,n do
 		gb[r] = {}
 		for c=1,m do
@@ -65,8 +68,17 @@ function new_knight(r,c,p)
 	knight = new_piece(r,c,p)
 	knight.sprnum = 2
 	knight.legmov = function(this)
-		moves = {}
-
+	 --calculate values one and two away
+		tup = r-2
+		oup = r-1
+		tdo = r+2
+		odo = r+1
+		tle = c-2
+		ole = c-1
+		tri = c+2
+		ori = c+1
+		--add possible moves
+		moves = {{tup, ole},{tup,ori},{oup,tle},{oup,tri},{odo,tle},{odo,tri},{tdo,ole},{tdo,ori}} 
 		return moves
 	end
 	add_piece(knight,r,c)
@@ -93,12 +105,18 @@ function update_hover()
 	if(btnp(3) and hovr<8) then
 		hovr = hovr+1
 	end
+	--update hover piece
+	hovp = gb[hovr][hovc]
 end
 
 function _draw()
 	draw_board()
 	draw_every()
 	draw_hover()
+	--draw moves of piece hovered over
+	if hovp > -1 then
+	 draw_moves(pl[hovp])
+	end
 end
 
 --draws the board
@@ -127,6 +145,19 @@ function draw_piece(obj)
 	end
 	spr(obj.sprnum, obj.col*16-16, obj.row*16-16, 2, 2)
 	pal()
+end
+
+--draws a piece's possible moves
+function draw_moves(obj)
+	moves = obj.legmov()
+	foreach(moves, draw_amove)
+end
+
+--draws a single move
+function draw_amove(move)
+	r = move[1]
+	c = move[2]
+	rectfill(c*16-12, r*16-12, c*16-5, r*16-5, 11)
 end
 
 function draw_hover()
