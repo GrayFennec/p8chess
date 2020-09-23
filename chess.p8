@@ -23,8 +23,8 @@ function _init()
 	init_board(brdw,brdh)
 	new_knight(7,7,0)
 	new_king(4,4,0)
-	new_pawn(5,4,0)
-	new_pawn(5,5,1)
+	new_pawn(7,6,0)
+	new_pawn(2,5,1)
 	new_bishop(6,7,0)
 	new_rook(3,3,0)
 	new_queen(6,3,0)
@@ -63,13 +63,21 @@ function new_pawn(r,c,p)
 	pawn = new_piece(r,c,p)
 	pawn.sprnum = 0
 	pawn.legmov = function(this)
+	 moves = {}
 	 --calculate one row foward 
 		if p == 0 then
-			fow = r-1			
+			add(moves,{r-1,c})
+			--double move for white
+			if r == brdh - 1	then
+				add(moves,{r-2, c})
+			end
 		else
-			fow = r+1
+			add(moves,{r+1,c})
+			--double move for black
+			if r == 2	then
+				add(moves,{4, c})
+			end
 		end
-		moves = {{fow,c}}
 		return moves
 	end
 	add_piece(pawn,r,c)
@@ -102,7 +110,7 @@ function new_bishop(r,c,p)
 	bishop.sprnum = 4
 	bishop.legmov = function(this)
 	 moves = {}
-	 for i=1,max(brdw,brdh) do
+	 for i = 1,max(brdw,brdh) do
 	 	add(moves,{r+i,c+i})
 	 	add(moves,{r-i,c+i})
 	 	add(moves,{r+i,c-i})
@@ -119,7 +127,7 @@ function new_rook(r,c,p)
 	rook.sprnum = 6
 	rook.legmov = function(this)
 	 moves = {}
-		for i=1,max(brdw,brdh) do
+		for i = 1,max(brdw,brdh) do
 	 	add(moves,{r,c-i})
 	 	add(moves,{r,c+i})
 	 	add(moves,{r-i,c})
@@ -136,7 +144,7 @@ function new_queen(r,c,p)
 	queen.sprnum = 8
 	queen.legmov = function(this)
 	 moves = {}
-	 for i=1,max(brdw,brdh) do
+	 for i = 1,max(brdw,brdh) do
 	 	add(moves,{r+i,c+i})
 	 	add(moves,{r-i,c+i})
 	 	add(moves,{r+i,c-i})
