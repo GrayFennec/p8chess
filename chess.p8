@@ -25,6 +25,9 @@ function _init()
 	new_king(4,4,0)
 	new_pawn(5,4,0)
 	new_pawn(5,5,1)
+	new_bishop(6,7,0)
+	new_rook(3,3,0)
+	new_queen(6,3,0)
 end
 
 --initalizes empty nxm board
@@ -91,6 +94,61 @@ function new_knight(r,c,p)
 		return moves
 	end
 	add_piece(knight,r,c)
+end
+
+--creates a new bishop
+function new_bishop(r,c,p)
+	bishop = new_piece(r,c,p)
+	bishop.sprnum = 4
+	bishop.legmov = function(this)
+	 moves = {}
+	 for i=1,max(brdw,brdh) do
+	 	add(moves,{r+i,c+i})
+	 	add(moves,{r-i,c+i})
+	 	add(moves,{r+i,c-i})
+	 	add(moves,{r-i,c-i})
+	 end
+		return moves
+	end
+	add_piece(bishop,r,c)
+end
+
+--creates a new rook
+function new_rook(r,c,p)
+	rook = new_piece(r,c,p)
+	rook.sprnum = 6
+	rook.legmov = function(this)
+	 moves = {}
+		for i=1,max(brdw,brdh) do
+	 	add(moves,{r,c-i})
+	 	add(moves,{r,c+i})
+	 	add(moves,{r-i,c})
+	 	add(moves,{r+i,c})
+	 end
+		return moves
+	end
+	add_piece(rook,r,c)
+end
+
+--creates a new queen
+function new_queen(r,c,p)
+	queen = new_piece(r,c,p)
+	queen.sprnum = 8
+	queen.legmov = function(this)
+	 moves = {}
+	 for i=1,max(brdw,brdh) do
+	 	add(moves,{r+i,c+i})
+	 	add(moves,{r-i,c+i})
+	 	add(moves,{r+i,c-i})
+	 	add(moves,{r-i,c-i})
+	 	add(moves,{r,c-i})
+	 	add(moves,{r,c+i})
+	 	add(moves,{r-i,c})
+	 	add(moves,{r+i,c})
+	 end
+		return moves
+	end
+	add_piece(queen,r,c)
 end
 
 --creates a new king
