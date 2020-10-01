@@ -21,13 +21,13 @@ brdh = 8
 function _init()
 	--init board to 8x8
 	init_board(brdw,brdh)
-	new_knight(7,7,0)
-	new_king(4,4,0)
-	new_pawn(7,6,0)
+	new_knight(7,7,1)
+	new_king(4,4,1)
+	new_pawn(7,6,1)
 	new_pawn(2,5,1)
-	new_bishop(6,7,0)
-	new_rook(3,3,0)
-	new_queen(6,3,0)
+	new_bishop(6,7,1)
+	new_rook(3,3,1)
+	new_queen(6,3,1)
 end
 
 --initalizes empty nxm board
@@ -58,6 +58,16 @@ function add_piece(obj,r,c)
 	gb[r][c] = #pl	
 end
 
+--gets pnum of square
+--it square empty, pnum is 0
+function get_pnum(r,c)
+	if gb[r][c] != -1 then
+	 return pl[gb[r][c]].pnum
+	else
+	 return 0
+	end
+end
+
 --creates a new pawn
 function new_pawn(r,c,p)
 	pawn = new_piece(r,c,p)
@@ -65,12 +75,12 @@ function new_pawn(r,c,p)
 	pawn.legmov = function(this)
 	 moves = {}
 	 --calculate one row foward 
-		if p == 0 then
+		if p == 1 then
 			add(moves,{r-1,c})
 			--double move for white
 			if r == brdh - 1	then
 				add(moves,{r-2, c})
-			end
+			end			
 		else
 			add(moves,{r+1,c})
 			--double move for black
@@ -232,7 +242,7 @@ end
 --draws any given piece
 function draw_piece(obj)
 	palt(14)
-	if(obj.pnum == 0) then
+	if(obj.pnum == 1) then
 		pal(0, 7)
 	end
 	spr(obj.sprnum, obj.col*16-16, obj.row*16-16, 2, 2)
