@@ -22,10 +22,10 @@ function _init()
 	--init board to 8x8
 	init_board(brdw,brdh)
 	new_knight(7,7,1)
-	new_king(4,4,1)
+	new_king(4,5,1)
 	new_pawn(7,6,1)
-	new_pawn(2,5,1)
-	new_bishop(6,7,1)
+	new_pawn(2,5,2)
+	new_bishop(6,6,1)
 	new_rook(3,3,1)
 	new_queen(6,3,1)
 end
@@ -58,10 +58,14 @@ function add_piece(obj,r,c)
 	gb[r][c] = #pl	
 end
 
+function val_cord(r,c)
+	return r > 0 and c > 0 and r <= brdh and c <= brdw
+end
+
 --gets pnum of square
 --it square empty, pnum is 0
 function get_pnum(r,c)
-	if gb[r][c] != -1 then
+	if val_cord(r,c) and gb[r][c] != -1 then
 	 return pl[gb[r][c]].pnum
 	else
 	 return 0
@@ -74,20 +78,32 @@ function new_pawn(r,c,p)
 	pawn.sprnum = 0
 	pawn.legmov = function(this)
 	 moves = {}
-	 --calculate one row foward 
-		if p == 1 then
+	 --calculate one row foward
+	 local f = p == 1 and -1 or 1
+	 if get_pnum(r+f,c) == 0 then
+	  add(moves,{r+f,c})
+	  if r-f == 1 or r-f == brdh then
+	   f*=2
+	   if get_pnum(r+f,c) == 0 then
+	  	 add(moves,{r+f,c})
+	   end
+	  end
+	 end
+	 --[[
+		if p == 1 and get_pnum(r-1,c) == -1then
 			add(moves,{r-1,c})
 			--double move for white
-			if r == brdh - 1	then
+			if r == brdh - 1	and get_pnum(r-2,c) == -1 then
 				add(moves,{r-2, c})
 			end			
-		else
+		elseif p ==2 and get_pnum(r+1,c) == -1
 			add(moves,{r+1,c})
 			--double move for black
 			if r == 2	then
 				add(moves,{4, c})
 			end
 		end
+		]]
 		return moves
 	end
 	add_piece(pawn,r,c)
