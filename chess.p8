@@ -25,7 +25,7 @@ function _init()
 	new_king(4,5,1)
 	new_pawn(7,6,1)
 	new_pawn(2,5,2)
-	new_bishop(6,6,1)
+	new_bishop(6,5,2)
 	new_rook(3,3,1)
 	new_queen(6,3,1)
 end
@@ -77,7 +77,7 @@ function new_pawn(r,c,p)
 	pawn = new_piece(r,c,p)
 	pawn.sprnum = 0
 	pawn.legmov = function(this)
-	 moves = {}
+	 local moves = {}
 	 --calculate one row foward
 	 local f = p == 1 and -1 or 1
 	 if get_pnum(r+f,c) == 0 then
@@ -89,21 +89,6 @@ function new_pawn(r,c,p)
 	   end
 	  end
 	 end
-	 --[[
-		if p == 1 and get_pnum(r-1,c) == -1then
-			add(moves,{r-1,c})
-			--double move for white
-			if r == brdh - 1	and get_pnum(r-2,c) == -1 then
-				add(moves,{r-2, c})
-			end			
-		elseif p ==2 and get_pnum(r+1,c) == -1
-			add(moves,{r+1,c})
-			--double move for black
-			if r == 2	then
-				add(moves,{4, c})
-			end
-		end
-		]]
 		return moves
 	end
 	add_piece(pawn,r,c)
@@ -114,6 +99,7 @@ function new_knight(r,c,p)
 	knight = new_piece(r,c,p)
 	knight.sprnum = 2
 	knight.legmov = function(this)
+		local moves = {}
 	 --calculate values one and two away
 		tup = r-2
 		oup = r-1
@@ -123,8 +109,13 @@ function new_knight(r,c,p)
 		ole = c-1
 		tri = c+2
 		ori = c+1
-		--add possible moves
-		moves = {{tup, ole},{tup,ori},{oup,tle},{oup,tri},{odo,tle},{odo,tri},{tdo,ole},{tdo,ori}} 
+		--create possible moves
+		local possi = {{tup, ole},{tup,ori},{oup,tle},{oup,tri},{odo,tle},{odo,tri},{tdo,ole},{tdo,ori}}
+		for m in all(possi) do
+		 if get_pnum(m[1], m[2]) != p then
+		  add(moves, m)
+		 end
+		end
 		return moves
 	end
 	add_piece(knight,r,c)
