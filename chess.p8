@@ -25,7 +25,7 @@ function _init()
 	new_king(4,5,1)
 	new_pawn(7,6,1)
 	new_pawn(2,5,2)
-	new_bishop(6,5,2)
+	new_bishop(1,1,2)
 	new_rook(3,3,1)
 	new_queen(6,3,1)
 end
@@ -126,12 +126,20 @@ function new_bishop(r,c,p)
 	bishop = new_piece(r,c,p)
 	bishop.sprnum = 4
 	bishop.legmov = function(this)
-	 moves = {}
+	 local moves = {}
+	 local direc = {{1, 1, true},{1, -1, true},{-1, -1, true},{-1, 1, true}}
 	 for i = 1,max(brdw,brdh) do
-	 	add(moves,{r+i,c+i})
-	 	add(moves,{r-i,c+i})
-	 	add(moves,{r+i,c-i})
-	 	add(moves,{r-i,c-i})
+	  for d in all(direc) do
+	   if d[3] then
+	    s = get_pnum(r+i*d[1], c+i*d[2])
+	    if s > 0 then
+	     d[3] = false
+	    end
+	    if s != p then
+	     add(moves,{r+i*d[1],c+i*d[2]})
+	    end
+	   end
+   end
 	 end
 		return moves
 	end
@@ -143,12 +151,20 @@ function new_rook(r,c,p)
 	rook = new_piece(r,c,p)
 	rook.sprnum = 6
 	rook.legmov = function(this)
-	 moves = {}
-		for i = 1,max(brdw,brdh) do
-	 	add(moves,{r,c-i})
-	 	add(moves,{r,c+i})
-	 	add(moves,{r-i,c})
-	 	add(moves,{r+i,c})
+	 local moves = {}
+	 local direc = {{1, 0, true},{0, -1, true},{-1, 0, true},{0, 1, true}}
+	 for i = 1,max(brdw,brdh) do
+	  for d in all(direc) do
+	   if d[3] then
+	    s = get_pnum(r+i*d[1], c+i*d[2])
+	    if s > 0 then
+	     d[3] = false
+	    end
+	    if s != p then
+	     add(moves,{r+i*d[1],c+i*d[2]})
+	    end
+	   end
+   end
 	 end
 		return moves
 	end
@@ -160,16 +176,20 @@ function new_queen(r,c,p)
 	queen = new_piece(r,c,p)
 	queen.sprnum = 8
 	queen.legmov = function(this)
-	 moves = {}
+	 local moves = {}
+	 local direc = {{1, 1, true},{1, 0, true},{1, -1, true},{0, -1, true},{-1, -1, true},{-1, 0, true},{-1, 1, true},{0, 1, true}}
 	 for i = 1,max(brdw,brdh) do
-	 	add(moves,{r+i,c+i})
-	 	add(moves,{r-i,c+i})
-	 	add(moves,{r+i,c-i})
-	 	add(moves,{r-i,c-i})
-	 	add(moves,{r,c-i})
-	 	add(moves,{r,c+i})
-	 	add(moves,{r-i,c})
-	 	add(moves,{r+i,c})
+	  for d in all(direc) do
+	   if d[3] then
+	    s = get_pnum(r+i*d[1], c+i*d[2])
+	    if s > 0 then
+	     d[3] = false
+	    end
+	    if s != p then
+	     add(moves,{r+i*d[1],c+i*d[2]})
+	    end
+	   end
+   end
 	 end
 		return moves
 	end
@@ -181,13 +201,18 @@ function new_king(r,c,p)
 	king = new_piece(r,c,p)
 	king.sprnum = 10
 	king.legmov = function(this)
+	 local moves = {}
 	 --calculate values one away
 		oup = r-1
 		odo = r+1
 		ole = c-1
 		ori = c+1
-		--add possible moves
-		moves = {{oup, ole},{oup,ori},{r,ole},{r,ori},{odo,ole},{odo,ori},{odo,c},{oup,c}} 
+		local possi = {{oup, ole},{oup,ori},{r,ole},{r,ori},{odo,ole},{odo,ori},{odo,c},{oup,c}}
+		for m in all(possi) do
+		 if get_pnum(m[1], m[2]) != p then
+		  add(moves, m)
+		 end
+		end
 		return moves
 	end
 	add_piece(king,r,c)
