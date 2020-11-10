@@ -25,13 +25,27 @@ brdh = 8
 function _init()
 	--init board to 8x8
 	init_board(brdw,brdh)
-	new_knight(7,7,1)
-	new_king(4,5,1)
-	new_pawn(7,6,1)
-	new_pawn(2,5,2)
-	new_bishop(1,1,2)
-	new_rook(3,3,1)
-	new_queen(6,3,1)
+	--create default chess board
+	for c = 1,8 do
+	 new_pawn(2,c,2)
+	 new_pawn(7,c,1)
+	end
+	new_knight(1,2,2)
+	new_knight(1,7,2)
+	new_knight(8,2,1)
+	new_knight(8,7,1)
+	new_bishop(1,3,2)
+	new_bishop(1,6,2)
+	new_bishop(8,3,1)
+	new_bishop(8,6,1)
+	new_rook(1,1,2)
+	new_rook(1,8,2)
+	new_rook(8,1,1)
+	new_rook(8,8,1)
+	new_queen(1,4,2)
+	new_queen(8,4,1)
+	new_king(1,5,2)
+	new_king(8,5,1)
 end
 
 --initalizes empty nxm board
@@ -133,67 +147,6 @@ function del_piece(p)
  pl[#pl] = nil
 end
 
-function _draw()
-	draw_board()
-	--draw moves of piece hovered over
-	if selp > 0 then
-	 draw_selec()
-	 draw_moves(pl[selp])
-	end
-	draw_every()
-	draw_hover()
-end
-
---draws the board
-function draw_board()
-	pal(1, 15)
-	pal(2, 4)
-	for r=1,8 do
-		for c=1,8 do
-			--draw background square
-			rectfill(c*16-16, r*16-16, c*16-1, r*16-1, (r+c)%2+1)
-		end
-	end
-	pal()
-end
-
---draws every piece
-function draw_every()
-	foreach(pl, draw_piece)
-end
-
---draws any given piece
-function draw_piece(obj)
-	palt(14)
-	if(obj.pnum == 1) then
-		pal(0, 7)
-	end
-	spr(obj.sprnum, obj.col*16-16, obj.row*16-16, 2, 2)
-	pal()
-end
-
---draws a piece's possible moves
-function draw_moves(obj)
-	moves = obj.legmov(obj)
-	foreach(moves, draw_amove)
-end
-
---draws a single move
-function draw_amove(move)
-	r = move[1]
-	c = move[2]
-	rectfill(c*16-12, r*16-12, c*16-5, r*16-5, 11)
-end
-
-function draw_hover()
- --if(t<8) then
-		rect(hovc*16-16, hovr*16-16, hovc*16-1, hovr*16-1, 12)
-	--end
-end
-
-function draw_selec()
- rectfill(selc*16-16, selr*16-16, selc*16-1, selr*16-1, 11)
-end
 -->8
 --piece constructors
 
@@ -378,6 +331,69 @@ function new_king(r,c,p)
 		return moves
 	end
 	add_piece(king,r,c)
+end
+-->8
+--draw code
+function _draw()
+	draw_board()
+	--draw moves of piece hovered over
+	if selp > 0 then
+	 draw_selec()
+	 draw_moves(pl[selp])
+	end
+	draw_every()
+	draw_hover()
+end
+
+--draws the board
+function draw_board()
+	pal(1, 15)
+	pal(2, 4)
+	for r=1,8 do
+		for c=1,8 do
+			--draw background square
+			rectfill(c*16-16, r*16-16, c*16-1, r*16-1, (r+c)%2+1)
+		end
+	end
+	pal()
+end
+
+--draws every piece
+function draw_every()
+	foreach(pl, draw_piece)
+end
+
+--draws any given piece
+function draw_piece(obj)
+	palt(14)
+	if(obj.pnum == 1) then
+		pal(0, 7)
+	end
+	spr(obj.sprnum, obj.col*16-16, obj.row*16-16, 2, 2)
+	pal()
+end
+
+--draws a piece's possible moves
+function draw_moves(obj)
+	moves = obj.legmov(obj)
+	foreach(moves, draw_amove)
+end
+
+--draws a single move
+function draw_amove(move)
+	r = move[1]
+	c = move[2]
+	rectfill(c*16-12, r*16-12, c*16-5, r*16-5, 11)
+end
+
+function draw_hover()
+ --if(t<8) then
+		rect(hovc*16-16, hovr*16-16, hovc*16-1, hovr*16-1, 12)
+	--end
+end
+
+function draw_selec()
+ rectfill(selc*16-16, selr*16-16, selc*16-1, selr*16-1, 11)
 end
 __gfx__
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
