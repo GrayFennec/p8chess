@@ -13,7 +13,9 @@ selp = 0
 --current tick 0 to 15
 t = 0
 --whoevers turn it is
-turn = 0
+turn = 1
+--number of players
+nump = 2
 --list of all game pieces
 pl = {}
 --game board
@@ -100,15 +102,16 @@ end
 
 function update_selec()
 	if btnp(4) then
-	 if selp == 0 then
+	 if selp == 0 and get_pnum(hovr, hovc) == turn then
 	  selp = gb[hovr][hovc]
 	  if selp > 0 then
 	   selr = hovr
 	   selc = hovc
 	  end
 	  return
-	 else
+	 elseif selp != 0 then
 	  move_piece(selp, hovr, hovc)
+	  turn = turn % nump + 1
 	 end
 	elseif not btnp(5) then
 	 return
