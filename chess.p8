@@ -111,7 +111,6 @@ function update_selec()
 	  return
 	 elseif selp != 0 then
 	  move_piece(selp, hovr, hovc)
-	  turn = turn % nump + 1
 	 end
 	elseif not btnp(5) then
 	 return
@@ -138,6 +137,8 @@ function move_piece(p, desr, desc)
 	  gb[desr][desc] = p
 	  obj.row = desr
 	  obj.col = desc
+	  --increment turn
+	  turn = turn % nump + 1
 	  return
 	 end
 	end
@@ -179,8 +180,15 @@ function new_pawn(r,c,p)
 	 local r = this.row
 	 local c = this.col
 	 local moves = {}
-	 --one row foward move
 	 local f = p == 1 and -1 or 1
+	 --captures (bad and hacky)
+	 if get_pnum(r+f,c-1) ^^ p == 3 then
+	  add(moves,{r+f,c-1})
+	 end
+	 if get_pnum(r+f,c+1) ^^ p == 3 then
+	  add(moves,{r+f,c+1})
+	 end
+	 --one row foward move
 	 if get_pnum(r+f,c) == 0 then
 	  add(moves,{r+f,c})
 	  --two row foward move
@@ -191,6 +199,7 @@ function new_pawn(r,c,p)
 	   end
 	  end
 	 end
+
 		return moves
 	end
 	add_piece(pawn,r,c)
