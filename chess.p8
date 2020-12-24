@@ -31,23 +31,23 @@ function _init()
 	init_board(brdw,brdh)
 	--create default chess board
 	for c = 1,8 do
-	 new_pawn(2,c,2)
-	 new_pawn(7,c,1)
+	 --new_pawn(2,c,2)
+	 --new_pawn(7,c,1)
 	end
 	new_knight(1,2,2)
 	new_knight(1,7,2)
 	new_knight(8,2,1)
 	new_knight(8,7,1)
-	new_bishop(1,3,2)
-	new_bishop(1,6,2)
-	new_bishop(8,3,1)
-	new_bishop(8,6,1)
+	--new_bishop(1,3,2)
+	--new_bishop(1,6,2)
+	--new_bishop(8,3,1)
+	--new_bishop(8,6,1)
 	new_rook(1,1,2)
 	new_rook(1,8,2)
 	new_rook(8,1,1)
 	new_rook(8,8,1)
-	new_queen(1,4,2)
-	new_queen(8,4,1)
+	--new_queen(1,4,2)
+	--new_queen(8,4,1)
 	new_king(1,5,2)
 	new_king(8,5,1)
 	--allow each player to castle
@@ -132,6 +132,45 @@ function move_piece(p, desr, desc)
  --check if coords are legal move
 	for move in all(moves) do
 	 if move[1] == desr and move[2] == desc then
+	  --check if king was moved
+	  if obj.sprnum == 10 then
+	   --check if move was castle
+	   if obj.col == 5 then
+	    iscast = false
+	    --kingside
+	    if desc == 7 then
+	     rookloc = 8
+	     rookdes = 6
+	     iscast = true
+	    end
+	    --queenside
+	    if desc == 3 then
+	     rookloc = 1
+	     rookdes = 4
+	     iscast = true
+	    end 
+	    if iscast then
+	     --move rook
+	     rookp = gb[desr][rookloc]
+		    gb[desr][rookdes] = rookp
+		    gb[desr][rookloc] = 0
+		    pl[rookp].col = rookdes	
+		   end
+	   end
+	   --can no longer castle
+	   cast[turn].k = false
+	   cast[turn].q = false
+	  end
+	  --check if rook is moved
+	  if obj.sprnum == 6 then
+	  	--check if castle is invalidated
+	  	if cast[turn].k and obj.col == 8 then
+	   	cast[turn].k = false
+	  	end
+	  	if cast[turn].q and obj.col == 1 then
+	    cast[turn].q = false
+	   end
+	  end
 	  --move the piece
 	  gb[obj.row][obj.col] = 0
 	  --delete piece that is there
@@ -145,41 +184,6 @@ function move_piece(p, desr, desc)
 	  turn = turn % nump + 1
 	  return
 	 end
-	end
-	--check for castling
-	if obj.sprnum == 10 and desr == obj.row then
-	 --kingside castle
-		if desc == 7 and cast[turn].k then
-			for i = 6,7 do
-			 if gb[desr][i] != 0 then
-			  return
-			 end
-			end
-			rookloc = 8
-			rookdes = 6
-		--queenside castle
-		elseif desc == 3 and cast[turn].q then
-			for i = 2,4 do
-			 if gb[desr][i] != 0 then
-			  return
-			 end
-			end
-			rookloc = 1
-			rookdes = 4
-		else
-		 return
-		end
-		--move king
-		gb[desr][obj.col] = 0
-		gb[desr][desc] = p
-		obj.col = desc
-		--move rook
-		rookp = gb[desr][rookloc]
-		gb[desr][rookdes] = rookp
-		gb[desr][rookloc] = 0
-		pl[rookp].col = rookdes
-		--increment turn
-	 turn = turn % nump + 1
 	end
 end
 
@@ -378,6 +382,15 @@ function new_king(r,c,p)
 		 if get_pnum(m[1], m[2]) != p then
 		  add(moves, m)
 		 end
+		end
+		--check for castling
+		--kingside
+		if cast[turn].k and gb[r][6] == 0 and gb[r][7] == 0 then
+			add(moves, {r, 7})
+		end
+		--queenside
+		if cast[turn].q and gb[r][2] == 0 and gb[r][3] == 0 and gb[r][4] == 0 then
+		 add(moves, {r, 3})
 		end
 		return moves
 	end
