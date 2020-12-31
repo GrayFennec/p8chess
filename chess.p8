@@ -18,8 +18,14 @@ turn = 1
 nump = 2
 --castling ability
 cast = {}
+--is player in check
+incheck = {}
+--keep track of king locations
+kingloc = {}
 --list of all game pieces
 pl = {}
+--value of the last deleted piece
+lastd = nil
 --game board
 gb = {}
 --board size
@@ -50,8 +56,11 @@ function _init()
 	--new_queen(8,4,1)
 	new_king(1,5,2)
 	new_king(8,5,1)
+	kingloc = {{8, 5},{1, 5}}
 	--allow each player to castle
 	cast = {{k = true, q = true},{k = true, q=true}}
+ --both players start not in check
+ incheck = {false, false}
 end
 
 --initalizes empty nxm board
@@ -132,6 +141,7 @@ function move_piece(p, desr, desc)
  --check if coords are legal move
 	for move in all(moves) do
 	 if move[1] == desr and move[2] == desc then
+	  curcast = cast[turn]
 	  --check if king was moved
 	  if obj.sprnum == 10 then
 	   --check if move was castle
@@ -160,14 +170,17 @@ function move_piece(p, desr, desc)
 	   --can no longer castle
 	   cast[turn].k = false
 	   cast[turn].q = false
+	   --update king location
+	   kingloc[turn][1] = desr
+	   kingloc[turn][2] = desc
 	  end
-	  --check if rook is moved
-	  if obj.sprnum == 6 then
+	  --check if rook on edge is moved
+	  if obj.sprnum == 6 and obj.row == turn * -7 + 15 then
 	  	--check if castle is invalidated
-	  	if cast[turn].k and obj.col == 8 then
+	  	if curcast.k and obj.col == 8 then
 	   	cast[turn].k = false
 	  	end
-	  	if cast[turn].q and obj.col == 1 then
+	  	if curcast.q and obj.col == 1 then
 	    cast[turn].q = false
 	   end
 	  end
@@ -175,7 +188,7 @@ function move_piece(p, desr, desc)
 	  gb[obj.row][obj.col] = 0
 	  --delete piece that is there
 	  if gb[desr][desc] > 0 then
-	   del_piece(gb[desr][desc])
+	   lastd = del(pl, pl[gb[desr][desc]])
 	  end
 	  gb[desr][desc] = p
 	  obj.row = desr
@@ -187,12 +200,20 @@ function move_piece(p, desr, desc)
 	end
 end
 
---deletes piece by overwriting
-function del_piece(p)
- pl[p] = pl[#pl]
- gb[pl[p].row][pl[p].col] = p
- pl[#pl] = nil
+--updates value of incheck to show if current player is now in check
+function update_check()
+ for obj in all(pl) do
+  if obj.pnum != turn then
+   for move in obj.legmov(obj) do
+   	if move == kingloc[turn] then
+   	 return true
+   	end
+   end
+  end
+ end
+ return false
 end
+
 
 -->8
 --piece constructors
@@ -203,7 +224,23 @@ function new_piece(r,c,p)
 	obj = {
 		row = r,
 		col = c,
-		pnum = p
+		pnum = p,
+		legmov = function(this)
+		 local moves = this.movl(this)
+   for move in all(moves) do
+    --remove out of bounds moves
+    if move[1] < 1 or move[1] > brdh then
+     del(moves, move)
+    elseif move[2] < 1 or move[2] > brdw then
+     del(moves, move)
+    else
+					--remove moves which lead to check
+					    
+      
+    end
+   end
+   return moves
+  end
 	}
  return obj
 end
@@ -219,7 +256,7 @@ end
 function new_pawn(r,c,p)
 	pawn = new_piece(r,c,p)
 	pawn.sprnum = 0
-	pawn.legmov = function(this)
+	pawn.movl = function(this)
 	 local r = this.row
 	 local c = this.col
 	 local moves = {}
@@ -242,7 +279,6 @@ function new_pawn(r,c,p)
 	   end
 	  end
 	 end
-
 		return moves
 	end
 	add_piece(pawn,r,c)
@@ -252,7 +288,7 @@ end
 function new_knight(r,c,p)
 	knight = new_piece(r,c,p)
 	knight.sprnum = 2
-	knight.legmov = function(this)
+	knight.movl = function(this)
 		local r = this.row
 	 local c = this.col
 		local moves = {}
@@ -281,7 +317,7 @@ end
 function new_bishop(r,c,p)
 	bishop = new_piece(r,c,p)
 	bishop.sprnum = 4
-	bishop.legmov = function(this)
+	bishop.movl = function(this)
 	 local r = this.row
 	 local c = this.col
 	 local moves = {}
@@ -310,7 +346,7 @@ end
 function new_rook(r,c,p)
 	rook = new_piece(r,c,p)
 	rook.sprnum = 6
-	rook.legmov = function(this)
+	rook.movl = function(this)
 		local r = this.row
 	 local c = this.col
 	 local moves = {}
@@ -339,7 +375,7 @@ end
 function new_queen(r,c,p)
 	queen = new_piece(r,c,p)
 	queen.sprnum = 8
-	queen.legmov = function(this)
+	queen.movl = function(this)
 		local r = this.row
 	 local c = this.col
 	 local moves = {}
@@ -368,7 +404,7 @@ end
 function new_king(r,c,p)
 	king = new_piece(r,c,p)
 	king.sprnum = 10
-	king.legmov = function(this)
+	king.movl = function(this)
 		local r = this.row
 	 local c = this.col
 	 local moves = {}
@@ -407,6 +443,10 @@ function _draw()
 	end
 	draw_every()
 	draw_hover()
+	--[[draw the current kingloc
+	curloc = kingloc[turn]
+	rectfill(curloc[2]*16-16, curloc[1]*16-16, curloc[2]*16-1, curloc[1]*16-1, 11)
+ --]]
 end
 
 --draws the board
