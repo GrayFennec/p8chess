@@ -8,89 +8,34 @@ hovc = 1
 --current selected coordinates
 selr = nil
 selc = nil
---current selected piece
-selp = 0
---current tick 0 to 15
-t = 0
 --whoevers turn it is
 turn = 1
 --number of players
 nump = 2
 --castling ability
 cast = {}
---is player in check
-incheck = {}
---keep track of king locations
-kingloc = {}
---list of all game pieces
-pl = {}
---value of the last deleted piece
-lastd = nil
 --game board
 gb = {}
 --board size
 brdw = 8
 brdh = 8
 
-function _init()
-	--init board to 8x8
-	init_board(brdw,brdh)
-	--create default chess board
-	for c = 1,8 do
-	 new_pawn(2,c,2)
-	 new_pawn(7,c,1)
-	end
-	new_knight(1,2,2)
-	new_knight(1,7,2)
-	new_knight(8,2,1)
-	new_knight(8,7,1)
-	new_bishop(1,3,2)
-	new_bishop(1,6,2)
-	new_bishop(8,3,1)
-	new_bishop(8,6,1)
-	new_rook(1,1,2)
-	new_rook(1,8,2)
-	new_rook(8,1,1)
-	new_rook(8,8,1)
-	new_queen(1,4,2)
-	new_queen(8,4,1)
-	new_king(1,5,2)
-	new_king(8,5,1)
-	kingloc = {{8, 5},{1, 5}}
-	--allow each player to castle
-	cast = {{k = true, q = true},{k = true, q=true}}
- --both players start not in check
- incheck = {false, false}
-end
-
---initalizes empty nxm board
-function init_board(n,m)
-	for r=1,n do
-		gb[r] = {}
-		for c=1,m do
-			gb[r][c] = 0
-		end
-	end
-end
-
 --checks if a coordinate is valid
-function val_cord(r,c)
+function val_coord(r,c)
 	return r > 0 and c > 0 and r <= brdh and c <= brdw
 end
 
 --gets pnum of square
 --it square empty, pnum is 0
 function get_pnum(r,c)
-	if val_cord(r,c) and gb[r][c] != 0 then
-	 return pl[gb[r][c]].pnum
+	if val_coord(r,c) and gb[r][c] != nil then
+	 return gb[r][c].pnum
 	else
 	 return 0
 	end
 end
 
 function _update()
-	--increment tick
-	t = (t+1)%16
 	--update hover
 	update_hover()
 	--update selec
@@ -115,32 +60,28 @@ end
 
 function update_selec()
 	if btnp(4) then
-	 if selp == 0 and get_pnum(hovr, hovc) == turn then
-	  selp = gb[hovr][hovc]
-	  if selp > 0 then
-	   selr = hovr
-	   selc = hovc
-	  end
+	 if selr == nil and get_pnum(hovr, hovc) == turn then
+	  selr = hovr
+	  selc = hovc
 	  return
-	 elseif selp != 0 then
-	  move_piece(selp, hovr, hovc)
+	 elseif selr != nil then
+	  move_piece(selr, selc, hovr, hovc)
 	 end
 	elseif not btnp(5) then
 	 return
 	end
-	selp = 0
 	selr = nil
 	selc = nil
 end
 
 --moves piece obj to destination
 --if it is a valid move
-function move_piece(p, desr, desc)
- obj = pl[p]
- moves = obj.legmov(obj)
+function move_piece(begr, begc, desr, desc)
+ moves = legal_moves(begr,begc)
  --check if coords are legal move
 	for move in all(moves) do
 	 if move[1] == desr and move[2] == desc then
+	  --[[
 	  curcast = cast[turn]
 	  --check if king was moved
 	  if obj.sprnum == 10 then
@@ -184,15 +125,10 @@ function move_piece(p, desr, desc)
 	    cast[turn].q = false
 	   end
 	  end
+	  --]]
 	  --move the piece
-	  gb[obj.row][obj.col] = 0
-	  --delete piece that is there
-	  if gb[desr][desc] > 0 then
-	   lastd = del(pl, pl[gb[desr][desc]])
-	  end
-	  gb[desr][desc] = p
-	  obj.row = desr
-	  obj.col = desc
+	  gb[desr][desc] = gb[begr][begc]
+	  gb[begr][begc] = nil
 	  --increment turn
 	  turn = turn % nump + 1
 	  return
@@ -200,6 +136,7 @@ function move_piece(p, desr, desc)
 	end
 end
 
+--[[
 --updates value of incheck to show if current player is now in check
 function update_check()
  for obj in all(pl) do
@@ -213,52 +150,34 @@ function update_check()
  end
  return false
 end
-
-
+--]]
+function legal_moves(r,c)
+			moves = gb[r][c].movl(r,c)
+			for move in all(moves) do
+				--remove out of bounds moves
+				if not val_coord(move[1],move[2]) then
+					del(moves, move)
+				end
+			end
+			return moves
+end
 -->8
 --piece constructors
 
 --abstract create new piece
---r=row c=col p=player
-function new_piece(r,c,p)
+--p=player
+function new_piece(p)
 	obj = {
-		row = r,
-		col = c,
-		pnum = p,
-		legmov = function(this)
-		 local moves = this.movl(this)
-   for move in all(moves) do
-    --remove out of bounds moves
-    if move[1] < 1 or move[1] > brdh then
-     del(moves, move)
-    elseif move[2] < 1 or move[2] > brdw then
-     del(moves, move)
-    else
-					--remove moves which lead to check
-					    
-      
-    end
-   end
-   return moves
-  end
+		pnum = p
 	}
  return obj
 end
 
---adds piece to piece list
-function add_piece(obj,r,c)
-	pl[#pl+1] = obj
-	--add pointer on game board
-	gb[r][c] = #pl	
-end
-
 --creates a new pawn
-function new_pawn(r,c,p)
-	pawn = new_piece(r,c,p)
+function new_pawn(p)
+	pawn = new_piece(p)
 	pawn.sprnum = 0
-	pawn.movl = function(this)
-	 local r = this.row
-	 local c = this.col
+	pawn.movl = function(r,c)
 	 local moves = {}
 	 local f = p == 1 and -1 or 1
 	 --captures (bad and hacky)
@@ -281,16 +200,14 @@ function new_pawn(r,c,p)
 	 end
 		return moves
 	end
-	add_piece(pawn,r,c)
+	return pawn
 end
 
 --creates a new knight
-function new_knight(r,c,p)
-	knight = new_piece(r,c,p)
+function new_knight(p)
+	knight = new_piece(p)
 	knight.sprnum = 2
-	knight.movl = function(this)
-		local r = this.row
-	 local c = this.col
+	knight.movl = function(r,c)
 		local moves = {}
 	 --calculate values one and two away
 		tup = r-2
@@ -310,16 +227,14 @@ function new_knight(r,c,p)
 		end
 		return moves
 	end
-	add_piece(knight,r,c)
+	return knight
 end
 
 --creates a new bishop
-function new_bishop(r,c,p)
-	bishop = new_piece(r,c,p)
+function new_bishop(p)
+	bishop = new_piece(p)
 	bishop.sprnum = 4
-	bishop.movl = function(this)
-	 local r = this.row
-	 local c = this.col
+	bishop.movl = function(r,c)
 	 local moves = {}
 	 --table of diagonals
 	 local direc = {{1, 1, true},{1, -1, true},{-1, -1, true},{-1, 1, true}}
@@ -339,16 +254,14 @@ function new_bishop(r,c,p)
 	 end
 		return moves
 	end
-	add_piece(bishop,r,c)
+	return bishop
 end
 
 --creates a new rook
-function new_rook(r,c,p)
-	rook = new_piece(r,c,p)
+function new_rook(p)
+	rook = new_piece(p)
 	rook.sprnum = 6
-	rook.movl = function(this)
-		local r = this.row
-	 local c = this.col
+	rook.movl = function(r,c)
 	 local moves = {}
 	 --table of straights
 	 local direc = {{1, 0, true},{0, -1, true},{-1, 0, true},{0, 1, true}}
@@ -368,16 +281,14 @@ function new_rook(r,c,p)
 	 end
 		return moves
 	end
-	add_piece(rook,r,c)
+	return rook
 end
 
 --creates a new queen
-function new_queen(r,c,p)
-	queen = new_piece(r,c,p)
+function new_queen(p)
+	queen = new_piece(p)
 	queen.sprnum = 8
-	queen.movl = function(this)
-		local r = this.row
-	 local c = this.col
+	queen.movl = function(r,c)
 	 local moves = {}
 	 --table of 8 directions
 	 local direc = {{1, 1, true},{1, 0, true},{1, -1, true},{0, -1, true},{-1, -1, true},{-1, 0, true},{-1, 1, true},{0, 1, true}}
@@ -397,16 +308,14 @@ function new_queen(r,c,p)
 	 end
 		return moves
 	end
-	add_piece(queen,r,c)
+	return queen
 end
 
 --creates a new king
-function new_king(r,c,p)
-	king = new_piece(r,c,p)
+function new_king(p)
+	king = new_piece(p)
 	king.sprnum = 10
-	king.movl = function(this)
-		local r = this.row
-	 local c = this.col
+	king.movl = function(r,c)
 	 local moves = {}
 	 --calculate values one away
 		oup = r-1
@@ -430,16 +339,16 @@ function new_king(r,c,p)
 		end
 		return moves
 	end
-	add_piece(king,r,c)
+	return king
 end
 -->8
 --draw code
 function _draw()
 	draw_board()
 	--draw moves of piece hovered over
-	if selp > 0 then
+	if selr != nil then
 	 draw_selec()
-	 draw_moves(pl[selp])
+	 draw_moves(selr,selc)
 	end
 	draw_every()
 	draw_hover()
@@ -464,23 +373,33 @@ end
 
 --draws every piece
 function draw_every()
-	foreach(pl, draw_piece)
+	for r=1,8 do
+		for c=1,8 do
+			draw_piece(r,c)
+		end
+	end
 end
 
---draws any given piece
-function draw_piece(obj)
-	palt(14)
+--draws any location
+function draw_piece(r,c)
+ palt(14)
+	if gb[r][c] != nil then
+	 obj = gb[r][c]
+	else
+	 return
+	end
 	if(obj.pnum == 1) then
 		pal(0, 7)
 		pal(7, 0)
 	end
-	spr(obj.sprnum, obj.col*16-16, obj.row*16-16, 2, 2)
+	spr(obj.sprnum, c*16-16, r*16-16, 2, 2)
 	pal()
 end
 
 --draws a piece's possible moves
-function draw_moves(obj)
-	moves = obj.legmov(obj)
+function draw_moves(r,c)
+ palt(14)
+	moves = legal_moves(r,c)
 	foreach(moves, draw_amove)
 end
 
@@ -488,35 +407,80 @@ end
 function draw_amove(move)
 	r = move[1]
 	c = move[2]
-	rectfill(c*16-12, r*16-12, c*16-5, r*16-5, 11)
+	--move to empty square
+	if gb[r][c] == nil then
+		spr(12, c*16-16, r*16-16, 2, 2)
+ --capture
+ else
+  spr(14, c*16-16, r*16-16, 2, 2)
+ 	--rectfill(c*16-12, r*16-12, c*16-5, r*16-5, 11) 
+ end
 end
 
 function draw_hover()
- --if(t<8) then
-		rect(hovc*16-16, hovr*16-16, hovc*16-1, hovr*16-1, 12)
-	--end
+	rect(hovc*16-16, hovr*16-16, hovc*16-1, hovr*16-1, 12)
 end
 
 function draw_selec()
  rectfill(selc*16-16, selr*16-16, selc*16-1, selr*16-1, 11)
 end
+-->8
+--init code
+function _init()
+	--init board to 8x8
+	init_board(brdw,brdh)
+	--create default chess board
+	for c = 1,8 do
+		gb[2][c] = new_pawn(2)
+	 gb[7][c] = new_pawn(1)
+	end
+	gb[1][2] = new_knight(2)
+	gb[1][7] = new_knight(2)
+	gb[8][2] = new_knight(1)
+	gb[8][7] = new_knight(1)
+	gb[1][3] = new_bishop(2)
+	gb[1][6] = new_bishop(2)
+	gb[8][3] = new_bishop(1)
+	gb[8][6] = new_bishop(1)
+ gb[1][1] = new_rook(2)
+ gb[1][8] = new_rook(2)
+ gb[8][1] = new_rook(1)
+ gb[8][8] = new_rook(1)
+ gb[1][4] = new_queen(2)
+ gb[8][4] = new_queen(1)
+ gb[1][5] = new_king(2)
+ gb[8][5] = new_king(1)
+	kingloc = {{8, 5},{1, 5}}
+	--allow each player to castle
+	cast = {{k = true, q = true},{k = true, q=true}}
+end
+
+--initalizes empty nxm board
+function init_board(n,m)
+	for r=1,n do
+		gb[r] = {}
+		for c=1,m do
+			gb[r][c] = nil
+		end
+	end
+end
 __gfx__
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeeee7777eeeeeeeeeee7ee7eeeeeeeeeeeeee77eeeeeeeeee77e7ee7e77eeeee7ee7eeee7ee7eeeeeeeee77eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeee700007eeeeeeeee707707eeeeeeeeeeee7007eeeeeeeee7070770707eeee707707ee707707eeeeeee7777eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeee70000007eeeeeeee7000007eeeeeeeeee700007eeeeeeee7000000007eeeee707707707707eeeeeeeee77eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeee70000007eeeeeee70000007eeeeeeeeee700007eeeeeeee7000000007eeeee707707707707eeeee777e77e777eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeee70000007eeeeeee707000007eeeeeeee70077007eeeeeeee70777707eeeeee700707707007eeee700077770007eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeee70000007eeeeee7000000007eeeeeeee70077007eeeeeeee70000007eeeeeee7070000707eeee70000777700007eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeee700007eeeeeee7000700007eeeeeeeee700007eeeeeeeeee700007eeeeeeee7000000007eeee70000077000007eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeeee7007eeeeeeee70070000007eeeeeeeee7007eeeeeeeeeee700007eeeeeeee7000000007eeee70000077000007eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeee700007eeeeeeee7770000007eeeeeeee700007eeeeeeeeee700007eeeeeeeee70000007eeeeee700007700007eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeee70000007eeeeeeeee70000007eeeeeee70077007eeeeeeee70000007eeeeeeee70777707eeeeeee7777777777eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeee70000007eeeeeeee700000007eeeeeee77000077eeeeeeee70777707eeeeeee7000000007eeeeee7000770007eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eee7000000007eeeeee70000000007eeeee7000000007eeeeee7000000007eeeeee7077777707eeeeee7700770077eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eee7000000007eeeeee70000000007eeee700000000007eeeee7000000007eeeeee7000000007eeeeeee70077007eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eee7777777777eeeeee77777777777eeee777777777777eeeee7777777777eeeeee7777777777eeeeeee77777777eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbbbeeeeeeeebbbb
+eeeeee7777eeeeeeeeeee7ee7eeeeeeeeeeeeee77eeeeeeeeee77e7ee7e77eeeee7ee7eeee7ee7eeeeeeeee77eeeeeeeeeeeeeeeeeeeeeeebbbeeeeeeeeeebbb
+eeeee700007eeeeeeeee707707eeeeeeeeeeee7007eeeeeeeee7070770707eeee707707ee707707eeeeeee7777eeeeeeeeeeeeeeeeeeeeeebbeeeeeeeeeeeebb
+eeee70000007eeeeeeee7000007eeeeeeeeee700007eeeeeeee7000000007eeeee707707707707eeeeeeeee77eeeeeeeeeeeeeeeeeeeeeeebeeeeeeeeeeeeeeb
+eeee70000007eeeeeee70000007eeeeeeeeee700007eeeeeeee7000000007eeeee707707707707eeeee777e77e777eeeeeeeeebbbbeeeeeeeeeeeeeeeeeeeeee
+eeee70000007eeeeeee707000007eeeeeeee70077007eeeeeeee70777707eeeeee700707707007eeee700077770007eeeeeeebbbbbbeeeeeeeeeeeeeeeeeeeee
+eeee70000007eeeeee7000000007eeeeeeee70077007eeeeeeee70000007eeeeeee7070000707eeee70000777700007eeeeebbbbbbbbeeeeeeeeeeeeeeeeeeee
+eeeee700007eeeeeee7000700007eeeeeeeee700007eeeeeeeeee700007eeeeeeee7000000007eeee70000077000007eeeeebbbbbbbbeeeeeeeeeeeeeeeeeeee
+eeeeee7007eeeeeeee70070000007eeeeeeeee7007eeeeeeeeeee700007eeeeeeee7000000007eeee70000077000007eeeeebbbbbbbbeeeeeeeeeeeeeeeeeeee
+eeeee700007eeeeeeee7770000007eeeeeeee700007eeeeeeeeee700007eeeeeeeee70000007eeeeee700007700007eeeeeebbbbbbbbeeeeeeeeeeeeeeeeeeee
+eeee70000007eeeeeeeee70000007eeeeeee70077007eeeeeeee70000007eeeeeeee70777707eeeeeee7777777777eeeeeeeebbbbbbeeeeeeeeeeeeeeeeeeeee
+eeee70000007eeeeeeee700000007eeeeeee77000077eeeeeeee70777707eeeeeee7000000007eeeeee7000770007eeeeeeeeebbbbeeeeeeeeeeeeeeeeeeeeee
+eee7000000007eeeeee70000000007eeeee7000000007eeeeee7000000007eeeeee7077777707eeeeee7700770077eeeeeeeeeeeeeeeeeeebeeeeeeeeeeeeeeb
+eee7000000007eeeeee70000000007eeee700000000007eeeee7000000007eeeeee7000000007eeeeeee70077007eeeeeeeeeeeeeeeeeeeebbeeeeeeeeeeeebb
+eee7777777777eeeeee77777777777eeee777777777777eeeee7777777777eeeeee7777777777eeeeeee77777777eeeeeeeeeeeeeeeeeeeebbbeeeeeeeeeebbb
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbbbeeeeeeeebbbb
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
