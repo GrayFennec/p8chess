@@ -16,6 +16,8 @@ nump = 2
 cast = {}
 --game board
 gb = {}
+--test board
+tb = {}
 --board size
 brdw = 8
 brdh = 8
@@ -26,12 +28,19 @@ function val_coord(r,c)
 end
 
 --gets pnum of square
---it square empty, pnum is 0
-function get_pnum(r,c)
-	if val_coord(r,c) and gb[r][c] != nil then
-	 return gb[r][c].pnum
+--if empty 0
+--if invalid 3
+--r,c: coordinate of square
+--b: board being checked
+function get_pnum(b,r,c)
+	if val_coord(r,c) then
+	 if b[r][c] != nil then
+	 	return b[r][c].pnum
+	 else
+	 	return 0
+	 end
 	else
-	 return 0
+	 return 3
 	end
 end
 
@@ -60,12 +69,12 @@ end
 
 function update_selec()
 	if btnp(4) then
-	 if selr == nil and get_pnum(hovr, hovc) == turn then
+	 if selr == nil and get_pnum(gb, hovr, hovc) == turn then
 	  selr = hovr
 	  selc = hovc
 	  return
 	 elseif selr != nil then
-	  move_piece(selr, selc, hovr, hovc)
+	  try_move(selr, selc, hovr, hovc)
 	 end
 	elseif not btnp(5) then
 	 return
@@ -76,90 +85,79 @@ end
 
 --moves piece obj to destination
 --if it is a valid move
-function move_piece(begr, begc, desr, desc)
+--begr, begc: the beginning coordinates 
+--desr, desc: the destination coordinates
+function try_move(begr, begc, desr, desc)
  moves = legal_moves(begr,begc)
  --check if coords are legal move
 	for move in all(moves) do
 	 if move[1] == desr and move[2] == desc then
-	  --[[
-	  curcast = cast[turn]
-	  --check if king was moved
-	  if obj.sprnum == 10 then
-	   --check if move was castle
-	   if obj.col == 5 then
-	    iscast = false
-	    --kingside
-	    if desc == 7 then
-	     rookloc = 8
-	     rookdes = 6
-	     iscast = true
-	    end
-	    --queenside
-	    if desc == 3 then
-	     rookloc = 1
-	     rookdes = 4
-	     iscast = true
-	    end 
-	    if iscast then
-	     --move rook
-	     rookp = gb[desr][rookloc]
-		    gb[desr][rookdes] = rookp
-		    gb[desr][rookloc] = 0
-		    pl[rookp].col = rookdes	
-		   end
-	   end
-	   --can no longer castle
-	   cast[turn].k = false
-	   cast[turn].q = false
-	   --update king location
-	   kingloc[turn][1] = desr
-	   kingloc[turn][2] = desc
-	  end
-	  --check if rook on edge is moved
-	  if obj.sprnum == 6 and obj.row == turn * -7 + 15 then
-	  	--check if castle is invalidated
-	  	if curcast.k and obj.col == 8 then
-	   	cast[turn].k = false
-	  	end
-	  	if curcast.q and obj.col == 1 then
-	    cast[turn].q = false
-	   end
-	  end
-	  --]]
 	  --move the piece
-	  gb[desr][desc] = gb[begr][begc]
-	  gb[begr][begc] = nil
+	  move_piece(gb, begr, begc, desr, desc)
 	  --increment turn
 	  turn = turn % nump + 1
-	  return
 	 end
 	end
 end
 
---[[
+--moves a piece
+--begr, begc: the beginning coordinates 
+--desr, desc: the destination coordinates
+--b: the board to make the move on
+function move_piece(b, begr, begc, desr, desc)
+ b[desr][desc] = gb[begr][begc]
+ b[begr][begc] = nil
+end
 --updates value of incheck to show if current player is now in check
-function update_check()
- for obj in all(pl) do
-  if obj.pnum != turn then
-   for move in obj.legmov(obj) do
-   	if move == kingloc[turn] then
-   	 return true
+--b: the board to check for checks
+--p: the player to check if in check
+function update_check(b,p)
+ --go through every piece
+ for r=1,8 do
+  for c=1,8 do
+   if b[r][c] != nil and b[r][c].pnum != p then
+   	moves = b[r][c].movl(b,r,c)
+   	--check all moves
+  		for move in all(moves) do
+   		if is_king(b,move[1],move[2]) then
+   	 	return true
+   	 end
    	end
    end
   end
  end
  return false
 end
---]]
+
+function is_king(b,r,c)
+ if b[r][c] != nil and b[r][c].sprnum == 10 then
+  return true
+ end
+ return false
+end
+
+--gets all legal moves of piece
+--r, c: the coordinates of the piece
 function legal_moves(r,c)
-			moves = gb[r][c].movl(r,c)
+			local moves = gb[r][c].movl(gb,r,c)
 			for move in all(moves) do
-				--remove out of bounds moves
-				if not val_coord(move[1],move[2]) then
-					del(moves, move)
-				end
+			 --test move
+			 make_tb()
+			 move_piece(tb, r, c, move[1], move[2])
+			 if update_check(tb, turn) then
+			  del(moves, move)
+			 end
 			end
 			return moves
+end
+
+--makes test board by cloning current game board
+function make_tb()
+	for r=1,8 do
+		for c=1,8 do
+		 tb[r][c] = gb[r][c]
+		end
+	end
 end
 -->8
 --piece constructors
@@ -177,23 +175,23 @@ end
 function new_pawn(p)
 	pawn = new_piece(p)
 	pawn.sprnum = 0
-	pawn.movl = function(r,c)
+	pawn.movl = function(b,r,c)
 	 local moves = {}
 	 local f = p == 1 and -1 or 1
 	 --captures (bad and hacky)
-	 if get_pnum(r+f,c-1) ^^ p == 3 then
+	 if get_pnum(b,r+f,c-1) ^^ p == 3 then
 	  add(moves,{r+f,c-1})
 	 end
-	 if get_pnum(r+f,c+1) ^^ p == 3 then
+	 if get_pnum(b,r+f,c+1) ^^ p == 3 then
 	  add(moves,{r+f,c+1})
 	 end
 	 --one row foward move
-	 if get_pnum(r+f,c) == 0 then
+	 if get_pnum(b,r+f,c) == 0 then
 	  add(moves,{r+f,c})
 	  --two row foward move
 	  if r-f == 1 or r-f == brdh then
 	   f*=2
-	   if get_pnum(r+f,c) == 0 then
+	   if get_pnum(b,r+f,c) == 0 then
 	  	 add(moves,{r+f,c})
 	   end
 	  end
@@ -207,7 +205,7 @@ end
 function new_knight(p)
 	knight = new_piece(p)
 	knight.sprnum = 2
-	knight.movl = function(r,c)
+	knight.movl = function(b,r,c)
 		local moves = {}
 	 --calculate values one and two away
 		tup = r-2
@@ -220,9 +218,10 @@ function new_knight(p)
 		ori = c+1
 		--create possible moves
 		local possi = {{tup, ole},{tup,ori},{oup,tle},{oup,tri},{odo,tle},{odo,tri},{tdo,ole},{tdo,ori}}
-		for m in all(possi) do
-		 if get_pnum(m[1], m[2]) != p then
-		  add(moves, m)
+		for move in all(possi) do
+		 local dnum = get_pnum(b,move[1], move[2])
+		 if dnum != 3 and dnum != p then
+		  add(moves, move)
 		 end
 		end
 		return moves
@@ -234,7 +233,7 @@ end
 function new_bishop(p)
 	bishop = new_piece(p)
 	bishop.sprnum = 4
-	bishop.movl = function(r,c)
+	bishop.movl = function(b,r,c)
 	 local moves = {}
 	 --table of diagonals
 	 local direc = {{1, 1, true},{1, -1, true},{-1, -1, true},{-1, 1, true}}
@@ -242,11 +241,11 @@ function new_bishop(p)
 	  --add moves along diagonals
 	  for d in all(direc) do
 	   if d[3] then
-	    s = get_pnum(r+i*d[1], c+i*d[2])
-	    if s > 0 then
+	    local dnum = get_pnum(b,r+i*d[1], c+i*d[2])
+	    if dnum > 0 then
 	     d[3] = false
 	    end
-	    if s != p then
+	    if dnum != 3 and dnum != p then
 	     add(moves,{r+i*d[1],c+i*d[2]})
 	    end
 	   end
@@ -261,7 +260,7 @@ end
 function new_rook(p)
 	rook = new_piece(p)
 	rook.sprnum = 6
-	rook.movl = function(r,c)
+	rook.movl = function(b,r,c)
 	 local moves = {}
 	 --table of straights
 	 local direc = {{1, 0, true},{0, -1, true},{-1, 0, true},{0, 1, true}}
@@ -269,11 +268,11 @@ function new_rook(p)
 	  --add moves along straights
 	  for d in all(direc) do
 	   if d[3] then
-	    s = get_pnum(r+i*d[1], c+i*d[2])
-	    if s > 0 then
+	    local dnum = get_pnum(b,r+i*d[1], c+i*d[2])
+	    if dnum > 0 then
 	     d[3] = false
 	    end
-	    if s != p then
+	    if dnum != 3 and dnum != p then
 	     add(moves,{r+i*d[1],c+i*d[2]})
 	    end
 	   end
@@ -288,7 +287,7 @@ end
 function new_queen(p)
 	queen = new_piece(p)
 	queen.sprnum = 8
-	queen.movl = function(r,c)
+	queen.movl = function(b,r,c)
 	 local moves = {}
 	 --table of 8 directions
 	 local direc = {{1, 1, true},{1, 0, true},{1, -1, true},{0, -1, true},{-1, -1, true},{-1, 0, true},{-1, 1, true},{0, 1, true}}
@@ -296,11 +295,11 @@ function new_queen(p)
 	  --add moves along each direction
 	  for d in all(direc) do
 	   if d[3] then
-	    s = get_pnum(r+i*d[1], c+i*d[2])
-	    if s > 0 then
+	    local dnum = get_pnum(b,r+i*d[1], c+i*d[2])
+	    if dnum > 0 then
 	     d[3] = false
 	    end
-	    if s != p then
+	    if dnum != 3 and dnum != p then
 	     add(moves,{r+i*d[1],c+i*d[2]})
 	    end
 	   end
@@ -315,7 +314,7 @@ end
 function new_king(p)
 	king = new_piece(p)
 	king.sprnum = 10
-	king.movl = function(r,c)
+	king.movl = function(b,r,c)
 	 local moves = {}
 	 --calculate values one away
 		oup = r-1
@@ -324,7 +323,8 @@ function new_king(p)
 		ori = c+1
 		local possi = {{oup, ole},{oup,ori},{r,ole},{r,ori},{odo,ole},{odo,ori},{odo,c},{oup,c}}
 		for m in all(possi) do
-		 if get_pnum(m[1], m[2]) != p then
+			local dnum = get_pnum(b, m[1], m[2]) 
+		 if dnum != 3 and dnum != p then
 		  add(moves, m)
 		 end
 		end
@@ -356,6 +356,7 @@ function _draw()
 	curloc = kingloc[turn]
 	rectfill(curloc[2]*16-16, curloc[1]*16-16, curloc[2]*16-1, curloc[1]*16-1, 11)
  --]]
+ print(tostr(update_check(gb,turn)),64,64)
 end
 
 --draws the board
@@ -399,8 +400,10 @@ end
 --draws a piece's possible moves
 function draw_moves(r,c)
  palt(14)
-	moves = legal_moves(r,c)
-	foreach(moves, draw_amove)
+ if gb[r][c] != nil then
+		moves = legal_moves(r,c)
+		foreach(moves, draw_amove)
+	end
 end
 
 --draws a single move
@@ -459,8 +462,10 @@ end
 function init_board(n,m)
 	for r=1,n do
 		gb[r] = {}
+		tb[r] = {}
 		for c=1,m do
 			gb[r][c] = nil
+			tb[r][c] = nil
 		end
 	end
 end
