@@ -8,23 +8,30 @@ hovc = 1
 --current selected coordinates
 selr = nil
 selc = nil
+--board size
+brdw = 8
+brdh = 8
+--[[
+following should be set up
+in init and other functions
 --whoevers turn it is
 turn = 1
---number of players
-nump = 2
 --castling ability
 cast = {}
 --game board
 gb = {}
 --test board
 tb = {}
---board size
-brdw = 8
-brdh = 8
+--]]
+
 
 --checks if a coordinate is valid
 function val_coord(r,c)
 	return r > 0 and c > 0 and r <= brdh and c <= brdw
+end
+
+function is_piece(b,r,c)
+ return b[r][c] != nil
 end
 
 --gets pnum of square
@@ -34,7 +41,7 @@ end
 --b: board being checked
 function get_pnum(b,r,c)
 	if val_coord(r,c) then
-	 if b[r][c] != nil then
+	 if is_piece(b,r,c) then
 	 	return b[r][c].pnum
 	 else
 	 	return 0
@@ -92,10 +99,35 @@ function try_move(begr, begc, desr, desc)
  --check if coords are legal move
 	for move in all(moves) do
 	 if move[1] == desr and move[2] == desc then
+	  --king specials
+	  if is_king(gb, begr, begc) then
+	   rookloc[turn] = nil
+		  --check if move is castle
+		  if move.castle then
+		   --check if kingside or queenside
+		   if move[2] < begc then
+	 				rc = 4
+		   else
+		    rc = 6
+		   end
+		   --move rook
+		   move_piece(gb, desr, desc, desr, rc)
+		   --set king destination
+		   desc = 2*rc-5
+		  end
+		 end
+		 --update castling is rook moved
+		 if is_rook(begr, begc) then
+		  for dir,rc in pairs(rookloc[turn]) do
+		   if begc == rc and begr == -7*turn+15 then
+		    rookloc[turn][dir] = nil
+		   end 
+		  end
+		 end
 	  --move the piece
 	  move_piece(gb, begr, begc, desr, desc)
 	  --increment turn
-	  turn = turn % nump + 1
+	  turn = turn % 2 + 1
 	 end
 	end
 end
@@ -113,9 +145,9 @@ end
 --p: the player to check if in check
 function update_check(b,p)
  --go through every piece
- for r=1,8 do
-  for c=1,8 do
-   if b[r][c] != nil and b[r][c].pnum != p then
+ for r=1,brdh do
+  for c=1,brdw do
+   if is_piece(b,r,c) and b[r][c].pnum != p then
    	moves = b[r][c].movl(b,r,c)
    	--check all moves
   		for move in all(moves) do
@@ -130,10 +162,7 @@ function update_check(b,p)
 end
 
 function is_king(b,r,c)
- if b[r][c] != nil and b[r][c].sprnum == 10 then
-  return true
- end
- return false
+ return is_piece(b,r,c) and b[r][c].sprnum == 10 
 end
 
 --gets all legal moves of piece
@@ -148,7 +177,52 @@ function legal_moves(r,c)
 			  del(moves, move)
 			 end
 			end
+			--castling logic
+			--if piece is king
+			if is_king(gb,r,c) then
+			 --check for castleable rooks
+				--rc: rook column
+				--dir: direction 1 = queenside, 2 = kingside
+				for dir,rc in pairs(rookloc[turn]) do
+					d = 2*dir
+					rd = 2+d
+					kd = rd-3+d
+					--make testboard
+					make_tb()
+					--remove king and rook
+					tb[r][c] = nil
+					tb[r][rc] = nil
+					--test if paths are clear
+					if path_clear(r,c,kd) and path_clear(r,rc,rd) then
+						--test if every square is safe
+						local safe = true
+						for path=min(kd,c),max(kd,c) do
+						 tb[r][path] = gb[r][c]
+						 safe = safe and not update_check(tb,turn)
+						 tb[r][path] = nil
+						end
+						--if path is safe add the castle
+						if safe then
+						 add(moves, {r,rc,castle = true})
+						end
+					end 
+				end
+			end
 			return moves
+end
+
+--castling helper function
+--checks if path on test board is clear
+--r: row of the path
+--c1: one end of path
+--c2: other end of path
+function path_clear(r, c1, c2)
+	for c=min(c1,c2),max(c1,c2) do
+	 if is_piece(tb,r,c) then
+	 	return false
+	 end
+	end
+	return true
 end
 
 --makes test board by cloning current game board
@@ -328,15 +402,6 @@ function new_king(p)
 		  add(moves, m)
 		 end
 		end
-		--check for castling
-		--kingside
-		if cast[turn].k and gb[r][6] == 0 and gb[r][7] == 0 then
-			add(moves, {r, 7})
-		end
-		--queenside
-		if cast[turn].q and gb[r][2] == 0 and gb[r][3] == 0 and gb[r][4] == 0 then
-		 add(moves, {r, 3})
-		end
 		return moves
 	end
 	return king
@@ -355,8 +420,10 @@ function _draw()
 	--[[draw the current kingloc
 	curloc = kingloc[turn]
 	rectfill(curloc[2]*16-16, curloc[1]*16-16, curloc[2]*16-1, curloc[1]*16-1, 11)
- --]]
+ --print if king is in check
  print(tostr(update_check(gb,turn)),64,64)
+	print(tostr(path_clear(4,1,8)), 64, 64)
+	--]]
 end
 
 --draws the board
@@ -433,10 +500,13 @@ function _init()
 	--init board to 8x8
 	init_board(brdw,brdh)
 	--create default chess board
+	--[[
 	for c = 1,8 do
 		gb[2][c] = new_pawn(2)
 	 gb[7][c] = new_pawn(1)
 	end
+	--]]
+	--[[
 	gb[1][2] = new_knight(2)
 	gb[1][7] = new_knight(2)
 	gb[8][2] = new_knight(1)
@@ -445,21 +515,54 @@ function _init()
 	gb[1][6] = new_bishop(2)
 	gb[8][3] = new_bishop(1)
 	gb[8][6] = new_bishop(1)
- gb[1][1] = new_rook(2)
- gb[1][8] = new_rook(2)
+	--]]
+ --gb[1][1] = new_rook(2)
+ --gb[1][8] = new_rook(2)
  gb[8][1] = new_rook(1)
  gb[8][8] = new_rook(1)
- gb[1][4] = new_queen(2)
- gb[8][4] = new_queen(1)
+ --gb[1][4] = new_queen(2)
+ --gb[8][4] = new_queen(1)
  gb[1][5] = new_king(2)
  gb[8][5] = new_king(1)
-	kingloc = {{8, 5},{1, 5}}
-	--allow each player to castle
-	cast = {{k = true, q = true},{k = true, q=true}}
+ --initialize castling vars
+ init_castl()
+ turn = 1
+end
+
+function init_castl()
+ --find each players outermost rook(s)
+ rookloc = {{},{}}
+ for p,r in pairs({8,1}) do
+ 	for c=1,brdw do
+			if is_king(gb,r,c) then
+			 kc = c
+			end
+	 end
+	 for c=kc,brdw do
+	 	if is_rook(r,c) then
+	   rookloc[p][2] = c
+	 	end
+	 end
+	 for c=kc,1,-1 do
+	 	if is_rook(r,c) then
+	   rookloc[p][1] = c
+	 	end
+	 end
+ end
+end
+
+
+--helper funciton for castling
+--checks if coordinate on gb is rook
+--r,c: coordinate to check
+function is_rook(r,c)
+ return is_piece(gb,r,c) and gb[r][c].sprnum == 6
 end
 
 --initalizes empty nxm board
 function init_board(n,m)
+ gb = {}
+ tb = {}
 	for r=1,n do
 		gb[r] = {}
 		tb[r] = {}
