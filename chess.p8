@@ -99,22 +99,9 @@ function try_move(begr, begc, desr, desc)
  --check if coords are legal move
 	for move in all(moves) do
 	 if move[1] == desr and move[2] == desc then
-	  --king specials
+	  --update castling if king is moved
 	  if is_king(gb, begr, begc) then
 	   rookloc[turn] = nil
-		  --check if move is castle
-		  if move.castle then
-		   --check if kingside or queenside
-		   if move[2] < begc then
-	 				rc = 4
-		   else
-		    rc = 6
-		   end
-		   --move rook
-		   move_piece(gb, desr, desc, desr, rc)
-		   --set king destination
-		   desc = 2*rc-5
-		  end
 		 end
 		 --update castling is rook moved
 		 if is_rook(begr, begc) then
@@ -124,8 +111,36 @@ function try_move(begr, begc, desr, desc)
 		   end 
 		  end
 		 end
-	  --move the piece
-	  move_piece(gb, begr, begc, desr, desc)
+		 --special moves
+		 --check if mvoe is enpassant
+		 if move.enpassant then
+		  --remove enemy pawn
+		  gb[begr][desc] = nil
+		 end
+		 --check if move is castle
+	  if move.castle then
+	   --check if kingside or queenside
+	   if move[2] < begc then
+ 				rc = 4
+	   else
+	    rc = 6
+	   end
+	   --save king
+	   king = gb[begr][begc]
+	   --move rook
+	   move_piece(gb, desr, desc, desr, rc)
+	   --place king
+	   gb[desr][2*rc-5] = king
+	  else
+		  --move the piece normally
+		  move_piece(gb, begr, begc, desr, desc)
+	  end
+	  --check if move was double step
+	  if move.double then
+	   eploc = {desr-2*turn+3,desc,enpassant = true}
+	  else
+	   eploc = nil
+	  end
 	  --increment turn
 	  turn = turn % 2 + 1
 	 end
@@ -208,6 +223,16 @@ function legal_moves(r,c)
 					end 
 				end
 			end
+			--en passant logic
+			if gb[r][c].sprnum == 0 and eploc != nil and abs(eploc[2]-c) == 1 and eploc[1]-2*turn+3 == r then
+			 --test en passant
+			 make_tb()
+			 move_piece(tb,r,c,eploc[1],eploc[2])
+			 tb[r][eploc[2]] = nil
+			 if not update_check(tb, turn) then
+			  add(moves, eploc)
+			 end
+			end
 			return moves
 end
 
@@ -266,7 +291,7 @@ function new_pawn(p)
 	  if r-f == 1 or r-f == brdh then
 	   f*=2
 	   if get_pnum(b,r+f,c) == 0 then
-	  	 add(moves,{r+f,c})
+	  	 add(moves,{r+f,c,double = true})
 	   end
 	  end
 	 end
@@ -500,13 +525,10 @@ function _init()
 	--init board to 8x8
 	init_board(brdw,brdh)
 	--create default chess board
-	--[[
 	for c = 1,8 do
 		gb[2][c] = new_pawn(2)
 	 gb[7][c] = new_pawn(1)
 	end
-	--]]
-	--[[
 	gb[1][2] = new_knight(2)
 	gb[1][7] = new_knight(2)
 	gb[8][2] = new_knight(1)
@@ -515,17 +537,18 @@ function _init()
 	gb[1][6] = new_bishop(2)
 	gb[8][3] = new_bishop(1)
 	gb[8][6] = new_bishop(1)
-	--]]
- --gb[1][1] = new_rook(2)
- --gb[1][8] = new_rook(2)
+ gb[1][1] = new_rook(2)
+ gb[1][8] = new_rook(2)
  gb[8][1] = new_rook(1)
  gb[8][8] = new_rook(1)
- --gb[1][4] = new_queen(2)
- --gb[8][4] = new_queen(1)
+ gb[1][4] = new_queen(2)
+ gb[8][4] = new_queen(1)
  gb[1][5] = new_king(2)
  gb[8][5] = new_king(1)
  --initialize castling vars
  init_castl()
+ --initialize en passant var
+ eploc = nil
  turn = 1
 end
 
@@ -538,16 +561,18 @@ function init_castl()
 			 kc = c
 			end
 	 end
-	 for c=kc,brdw do
-	 	if is_rook(r,c) then
-	   rookloc[p][2] = c
-	 	end
-	 end
-	 for c=kc,1,-1 do
-	 	if is_rook(r,c) then
-	   rookloc[p][1] = c
-	 	end
-	 end
+	 if kc != nil then
+		 for c=kc,brdw do
+		 	if is_rook(r,c) then
+		   rookloc[p][2] = c
+		 	end
+		 end
+		 for c=kc,1,-1 do
+		 	if is_rook(r,c) then
+		   rookloc[p][1] = c
+		 	end
+		 end
+		end
  end
 end
 
