@@ -63,7 +63,7 @@ function try_move(begr, begc, desr, desc)
 	 if move[1] == desr and move[2] == desc then
 	  --update castling if king is moved
 	  if is_king(gb, begr, begc) then
-	   rookloc[turn] = nil
+	   rookloc[turn] = {nil,nil}
 		 end
 		 --update castling is rook moved
 		 if is_rook(begr, begc) then
@@ -89,6 +89,7 @@ function try_move(begr, begc, desr, desc)
 	   end
 	   --save king
 	   king = gb[begr][begc]
+	   gb[begr][begc] = nil
 	   --move rook
 	   move_piece(gb, desr, desc, desr, rc)
 	   --place king
@@ -224,7 +225,8 @@ function new_pawn(p)
 	pawn.movl = function(b,r,c)
 	 local moves = {}
 	 local f = p == 1 and -1 or 1
-	 --captures (bad and hacky)
+	 --captures
+	 --todo: make math better
 	 if get_pnum(b,r+f,c-1) ^^ p == 3 then
 	  add(moves,{r+f,c-1})
 	 end
@@ -464,39 +466,15 @@ end
 function _init()
 	--init board to 8x8
 	init_board(brdw,brdh)
-	--create default chess board
-	for c = 1,8 do
-		gb[2][c] = new_pawn(2)
-	 gb[7][c] = new_pawn(1)
-	end
-	gb[1][2] = new_knight(2)
-	gb[1][7] = new_knight(2)
-	gb[8][2] = new_knight(1)
-	gb[8][7] = new_knight(1)
-	gb[1][3] = new_bishop(2)
-	gb[1][6] = new_bishop(2)
-	gb[8][3] = new_bishop(1)
-	gb[8][6] = new_bishop(1)
- gb[1][1] = new_rook(2)
- gb[1][8] = new_rook(2)
- gb[8][1] = new_rook(1)
- gb[8][8] = new_rook(1)
- gb[1][4] = new_queen(2)
- gb[8][4] = new_queen(1)
- gb[1][5] = new_king(2)
- gb[8][5] = new_king(1)
- --initialize castling vars
- init_castl()
- --initialize en passant var
- eploc = nil
- turn = 1
+ import_fen(stat(4))
 end
 
 --initialize rookloc by finding
 --outermost rooks on home rows
 function init_castl()
  --find each players outermost rook(s)
- rookloc = {{},{}}
+ rookloc = {{nil,nil},{nil,nil}}
+ kc = nil
  for p,r in pairs({8,1}) do
  	for c=1,brdw do
 			if is_king(gb,r,c) then
@@ -530,6 +508,73 @@ function init_board(n,m)
 			tb[r][c] = nil
 		end
 	end
+end
+
+function import_fen(fen)
+ --split fen into secitons
+ data = split(fen," ")
+ --create board
+ for r,cdata in pairs(split(data[1],"/")) do
+  c = 1
+  while cdata != "" do
+	  n = sub(cdata,1,1)
+	  if tonum(n) then
+	   c += n
+	  else
+    v = c2v[n]
+    p = v > 6 and 2 or 1
+    v %= 6
+    if v == 1 then
+     piece = new_pawn(p)
+    elseif v == 2 then
+     piece = new_knight(p)
+    elseif v == 3 then
+     piece = new_bishop(p)
+    elseif v == 4 then
+     piece = new_rook(p)
+    elseif v == 5 then 
+     piece = new_queen(p)
+    elseif v == 0 then
+     piece = new_king(p)
+    end
+    gb[r][c] = piece
+	   c += 1
+	  end
+	  cdata = sub(cdata,2) 
+	 end
+	end
+	--figure out turn
+	turn = data[2] == "w" and 1 or 2
+ --castling ability
+ --create initial vars
+ init_castl()
+ i = 1
+ n = sub(data[3],i,i)
+ for k,v in pairs({"\75","\81","k","q"}) do
+	 if n == v then
+	  i += 1
+	 	n = sub(data[3],i,i)
+	 else
+	  rookloc[k\3+1][k%2+1] = nil
+	 end
+	end
+	--enpassant
+	if data[4] == "-" then
+	 eploc = nil
+	else
+	 eploc = {c2c[sub(data[4],1,1)],tonum(sub(data[4],2))}
+	end
+end
+
+--fen chars to piece values
+vchars="PNBRQKpnbrqk"
+--fen chars to column values
+cchars="abcdefgh"
+c2v={}
+c2c={}
+for i = 1,12 do
+ c2v[sub(vchars,i,i)]=i
+ c2c[sub(cchars,i,i)]=i
 end
 -->8
 --helper functions
