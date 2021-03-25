@@ -2,54 +2,16 @@ pico-8 cartridge // http://www.pico-8.com
 version 30
 __lua__
 --main code
+--global vars--
 --current coordinates of hover
 hovr = 1
 hovc = 1
 --current selected coordinates
 selr = nil
 selc = nil
---board size
+--board size 
 brdw = 8
 brdh = 8
---[[
-following should be set up
-in init and other functions
---whoevers turn it is
-turn = 1
---castling ability
-cast = {}
---game board
-gb = {}
---test board
-tb = {}
---]]
-
-
---checks if a coordinate is valid
-function val_coord(r,c)
-	return r > 0 and c > 0 and r <= brdh and c <= brdw
-end
-
-function is_piece(b,r,c)
- return b[r][c] != nil
-end
-
---gets pnum of square
---if empty 0
---if invalid 3
---r,c: coordinate of square
---b: board being checked
-function get_pnum(b,r,c)
-	if val_coord(r,c) then
-	 if is_piece(b,r,c) then
-	 	return b[r][c].pnum
-	 else
-	 	return 0
-	 end
-	else
-	 return 3
-	end
-end
 
 function _update()
 	--update hover
@@ -147,7 +109,7 @@ function try_move(begr, begc, desr, desc)
 	end
 end
 
---moves a piece
+--moves a piece on a board
 --begr, begc: the beginning coordinates 
 --desr, desc: the destination coordinates
 --b: the board to make the move on
@@ -155,6 +117,7 @@ function move_piece(b, begr, begc, desr, desc)
  b[desr][desc] = gb[begr][begc]
  b[begr][begc] = nil
 end
+
 --updates value of incheck to show if current player is now in check
 --b: the board to check for checks
 --p: the player to check if in check
@@ -174,10 +137,6 @@ function update_check(b,p)
   end
  end
  return false
-end
-
-function is_king(b,r,c)
- return is_piece(b,r,c) and b[r][c].sprnum == 10 
 end
 
 --gets all legal moves of piece
@@ -236,20 +195,6 @@ function legal_moves(r,c)
 			return moves
 end
 
---castling helper function
---checks if path on test board is clear
---r: row of the path
---c1: one end of path
---c2: other end of path
-function path_clear(r, c1, c2)
-	for c=min(c1,c2),max(c1,c2) do
-	 if is_piece(tb,r,c) then
-	 	return false
-	 end
-	end
-	return true
-end
-
 --makes test board by cloning current game board
 function make_tb()
 	for r=1,8 do
@@ -258,6 +203,8 @@ function make_tb()
 		end
 	end
 end
+
+
 -->8
 --piece constructors
 
@@ -442,13 +389,6 @@ function _draw()
 	end
 	draw_every()
 	draw_hover()
-	--[[draw the current kingloc
-	curloc = kingloc[turn]
-	rectfill(curloc[2]*16-16, curloc[1]*16-16, curloc[2]*16-1, curloc[1]*16-1, 11)
- --print if king is in check
- print(tostr(update_check(gb,turn)),64,64)
-	print(tostr(path_clear(4,1,8)), 64, 64)
-	--]]
 end
 
 --draws the board
@@ -552,6 +492,8 @@ function _init()
  turn = 1
 end
 
+--initialize rookloc by finding
+--outermost rooks on home rows
 function init_castl()
  --find each players outermost rook(s)
  rookloc = {{},{}}
@@ -576,14 +518,6 @@ function init_castl()
  end
 end
 
-
---helper funciton for castling
---checks if coordinate on gb is rook
---r,c: coordinate to check
-function is_rook(r,c)
- return is_piece(gb,r,c) and gb[r][c].sprnum == 6
-end
-
 --initalizes empty nxm board
 function init_board(n,m)
  gb = {}
@@ -596,6 +530,66 @@ function init_board(n,m)
 			tb[r][c] = nil
 		end
 	end
+end
+-->8
+--helper functions
+--castling helper function
+--checks if path on test board is clear
+--r: row of the path
+--c1: one end of path
+--c2: other end of path
+function path_clear(r, c1, c2)
+	for c=min(c1,c2),max(c1,c2) do
+	 if is_piece(tb,r,c) then
+	 	return false
+	 end
+	end
+	return true
+end
+
+--castling helper function
+--checks if coordinate on gb is rook
+--r,c: coordinate to check
+function is_rook(r,c)
+ return is_piece(gb,r,c) and gb[r][c].sprnum == 6
+end
+
+--check and castling helper function
+--checks if coordinate on board is king
+--r,c: coordinate to check
+--b: the board to check
+function is_king(b,r,c)
+ return is_piece(b,r,c) and b[r][c].sprnum == 10 
+end
+
+--gets pnum of square
+--if empty 0
+--if invalid 3
+--r,c: coordinate of square
+--b: board being checked
+function get_pnum(b,r,c)
+	if val_coord(r,c) then
+	 if is_piece(b,r,c) then
+	 	return b[r][c].pnum
+	 else
+	 	return 0
+	 end
+	else
+	 return 3
+	end
+end
+
+--tests is square is not empty
+--r,c: coordinate to check
+--b: board to check
+function is_piece(b,r,c)
+ return b[r][c] != nil
+end
+
+--checks if a coordinate valid
+--r,c: coordinate to check
+function val_coord(r,c)
+	return r > 0 and c > 0 and r <= brdh and c <= brdw
 end
 __gfx__
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeebbbbeeeeeeeebbbb
