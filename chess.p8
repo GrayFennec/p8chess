@@ -466,7 +466,8 @@ end
 function _init()
 	--init board to 8x8
 	init_board(brdw,brdh)
- import_fen(stat(4))
+ import_fen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+ --import_fen(stat(4))
 end
 
 --initialize rookloc by finding
