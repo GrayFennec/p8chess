@@ -12,12 +12,39 @@ selc = nil
 --board size 
 brdw = 8
 brdh = 8
+--winner 
+winr = -1
 
 function _update()
 	--update hover
 	update_hover()
 	--update selec
 	update_selec()
+end
+
+--checks for check/stale mate
+--for current player
+function update_mates()
+ canmove = false
+ --iterate to find legal moves
+ for r=1,brdh do
+  for c=1,brdw do
+   if get_pnum(gb,r,c) == turn and #legal_moves(r,c) != 0 then
+    canmove = true
+   	break
+   end
+  end
+ end
+ --no legal moves means mate
+ if not canmove then
+  --incheck -> checkmate
+  if update_check(gb,turn) then
+   winr = turn % 2 + 1
+  --nocheck -> stalemate
+  else
+   winr = 3
+  end
+ end 
 end
 
 --player button input
@@ -105,9 +132,15 @@ function try_move(begr, begc, desr, desc)
 	   eploc = nil
 	  end
 	  --increment turn
-	  turn = turn % 2 + 1
+	  change_turn()
 	 end
 	end
+end
+
+function change_turn()
+ turn = turn % 2 + 1
+  --check for mate
+ update_mates()
 end
 
 --moves a piece on a board
@@ -198,8 +231,8 @@ end
 
 --makes test board by cloning current game board
 function make_tb()
-	for r=1,8 do
-		for c=1,8 do
+	for r=1,brdh do
+		for c=1,brdw do
 		 tb[r][c] = gb[r][c]
 		end
 	end
@@ -391,14 +424,16 @@ function _draw()
 	end
 	draw_every()
 	draw_hover()
+	print("turn:"..tostr(turn),64,64)
+	print("mate:"..tostr(winr),64,72)
 end
 
 --draws the board
 function draw_board()
 	pal(1, 15)
 	pal(2, 4)
-	for r=1,8 do
-		for c=1,8 do
+	for r=1,brdh do
+		for c=1,brdw do
 			--draw background square
 			rectfill(c*16-16, r*16-16, c*16-1, r*16-1, (r+c)%2+1)
 		end
