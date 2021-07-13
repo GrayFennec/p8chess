@@ -1,5 +1,5 @@
 pico-8 cartridge // http://www.pico-8.com
-version 30
+version 32
 __lua__
 --main code
 --global vars--
@@ -134,6 +134,10 @@ function try_move(begr, begc, desr, desc)
 	  else
 	   eploc = nil
 	  end
+	  --check if move was pawn to last rank
+	  if move.promote then
+	   gb[desr][desc] = new_queen(turn)
+	  end
 	  --increment turn
 	  change_turn()
 	 end
@@ -261,22 +265,23 @@ function new_pawn(p)
 	pawn.movl = function(b,r,c)
 	 local moves = {}
 	 local f = p == 1 and -1 or 1
+	 local prom = r+f == 1 or r+f == brdh 
 	 --captures
 	 --todo: make math better
 	 if get_pnum(b,r+f,c-1) ^^ p == 3 then
-	  add(moves,{r+f,c-1})
+	  add(moves,{r+f,c-1,promote = prom})
 	 end
 	 if get_pnum(b,r+f,c+1) ^^ p == 3 then
-	  add(moves,{r+f,c+1})
+	  add(moves,{r+f,c+1,promote = prom})
 	 end
 	 --one row foward move
 	 if get_pnum(b,r+f,c) == 0 then
-	  add(moves,{r+f,c})
+	  add(moves,{r+f,c,promote = prom})
 	  --two row foward move
 	  if r-f == 1 or r-f == brdh then
 	   f*=2
 	   if get_pnum(b,r+f,c) == 0 then
-	  	 add(moves,{r+f,c,double = true})
+	  	 add(moves,{r+f,c,double = true,promote = prom})
 	   end
 	  end
 	 end
@@ -788,3 +793,10 @@ eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+__sfx__
+000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000001015000000100500000010050000001005000000131500000010050000001005000000100500000017050000001305000000100500000013050000001015000000100500000010050000001005000000
+__music__
+00 01424344
+00 01024344
+
