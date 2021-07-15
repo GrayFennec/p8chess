@@ -7,7 +7,6 @@ controls:
 - x/v/m: unselect piece
 
 todo:
-- pawn promotion
 - music
 - 50 move rule
 - threefold repetition rule

@@ -17,6 +17,10 @@ brdh = 8
 --1 = checkmate
 --2 = stalemate
 winr = 0
+--show promotion ui?
+promui = false
+--current promotion hover
+promsel = nil
 
 function _update()
 	--update hover
@@ -52,23 +56,45 @@ end
 
 --player button input
 function update_hover()
-	if btnp(0) and hovc>1 then
-		hovc = hovc-1
-	end
-	if btnp(1) and hovc<brdw then
-		hovc = hovc+1
-	end
-	if btnp(2) and hovr>1 then
+ if promui then
+  if btnp(0) and promsel>1 then
+   promsel = promsel-1
+  end
+  if btnp(1) and promsel<4 then
+   promsel = promsel+1
+  end
+ else
+		if btnp(0) and hovc>1 then
+			hovc = hovc-1
+		end
+		if btnp(1) and hovc<brdw then
+			hovc = hovc+1
+		end
+		if btnp(2) and hovr>1 then
 		hovr = hovr-1
-	end
-	if btnp(3) and hovr<brdh then
-		hovr = hovr+1
+		end
+		if btnp(3) and hovr<brdh then
+			hovr = hovr+1
+		end
 	end
 end
 
 function update_selec()
 	if btnp(4) then
-	 if selr == nil and get_pnum(gb, hovr, hovc) == turn then
+	 if promui then
+	  if promsel == 1 then
+	   p = new_knight(turn)
+	  elseif promsel == 2 then
+	   p = new_bishop(turn)
+	  elseif promsel == 3 then
+	   p = new_rook(turn)
+	  elseif promsel == 4 then
+	   p = new_queen(turn)
+	  end
+	  gb[hovr][hovc] = p
+	  promui = false
+	  change_turn()
+	 elseif selr == nil and get_pnum(gb, hovr, hovc) == turn then
 	  selr = hovr
 	  selc = hovc
 	  return
@@ -136,10 +162,13 @@ function try_move(begr, begc, desr, desc)
 	  end
 	  --check if move was pawn to last rank
 	  if move.promote then
-	   gb[desr][desc] = new_queen(turn)
+	   promui = true
+	   promsel = 1
+	   --gb[desr][desc] = new_queen(turn)
+	  else
+		  --increment turn
+		  change_turn()
 	  end
-	  --increment turn
-	  change_turn()
 	 end
 	end
 end
@@ -431,9 +460,15 @@ function _draw()
 	 draw_moves(selr,selc)
 	end
 	draw_every()
-	draw_hover()
+	if promui then
+	 draw_promo()
+	else
+	 draw_hover()
+	end
 	--cheap check/stalemate print
-	draw_winr()
+ if winr > 0 then
+	 draw_winr()
+	end
 end
 
 --draws the board
@@ -506,19 +541,30 @@ function draw_selec()
 end
 
 function draw_winr()
- if winr > 0 then
-  if turn == 1 then
-  	pal(0,7)
-  	pal(7,0)
-  end
-  rectfill(0,0,127,127,0)
-  if winr == 2 then
-   spr(96,34,32,8,2) 
-  else
-   spr(64,34,32,8,2) 
-  end
-  spr(72,40,48,6,2)
+ if turn == 1 then
+ 	pal(0,7)
+ 	pal(7,0)
  end
+ rectfill(0,0,127,127,0)
+ if winr == 2 then
+  spr(96,34,32,8,2) 
+ else
+  spr(64,34,32,8,2) 
+ end
+ spr(72,40,48,6,2)
+end
+
+--draw promotion ui
+function draw_promo()
+ if turn == 2 then
+  pal(0,7)
+  pal(7,0)
+ end
+ rectfill(32,56,95,71,7)
+ rect(32,56,95,71,0)
+ palt(14)
+ spr(2,32,56,8,2)
+ rect(16+16*promsel,56,31+16*promsel,71,12)
 end
 -->8
 --init code
